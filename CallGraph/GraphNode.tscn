@@ -1,0 +1,8 @@
+[gd_scene format=2]
+
+[node name="GraphNode" type="Spatial"]
+
+[node name="CSGSphere" type="CSGSphere" parent="."]
+transform = Transform( 1, 0, 0, 0, 0.535399, -0.844599, 0, 0.844599, 0.535399, 0, 0, 0 )
+radius = 0.356
+rings = 4

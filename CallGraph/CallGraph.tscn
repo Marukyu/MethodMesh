@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://CallGraph/GraphNode.tscn" type="PackedScene" id=1]
+
+[node name="CallGraph" type="Spatial"]
+
+[node name="TestNode" parent="." instance=ExtResource( 1 )]

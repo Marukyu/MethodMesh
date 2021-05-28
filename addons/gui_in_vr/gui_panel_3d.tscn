@@ -21,7 +21,7 @@ albedo_texture = SubResource( 3 )
 [node name="GUIPanel3D" type="StaticBody"]
 
 [node name="Viewport" type="Viewport" parent="."]
-size = Vector2( 280, 180 )
+size = Vector2( 280, 204 )
 hdr = false
 usage = 0
 render_target_v_flip = true
