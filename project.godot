@@ -63,5 +63,4 @@ common/physics_fps=180
 [rendering]
 
 quality/filters/msaa=4
-quality/depth/hdr=false
 environment/default_environment="res://default_env.tres"

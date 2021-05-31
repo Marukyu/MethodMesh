@@ -13,3 +13,7 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0 )
 [node name="TestNode2" parent="." instance=ExtResource( 1 )]
 
 [node name="Edge" parent="." instance=ExtResource( 3 )]
+
+[node name="Nodes" type="Spatial" parent="."]
+
+[node name="Edges" type="Spatial" parent="."]
