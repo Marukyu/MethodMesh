@@ -30,7 +30,7 @@ func _ready():
 	if enableVR:
 		initVR()
 	else:
-		get_parent().find_node("GUIPanel3D").hide()
+		get_parent().find_node("GUIPanel3D").queue_free()
 		get_parent().call_deferred("add_child", GUIType.instance())
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

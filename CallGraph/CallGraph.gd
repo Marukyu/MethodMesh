@@ -35,8 +35,15 @@ func _process(_delta):
 	pass
 
 
-func _physics_process(_delta):
-	pass
+func _physics_process(delta):
+	for edge in edges:
+		var node1 = edge[1]
+		var node2 = edge[2]
+		var force = (node2.translation - node1.translation)
+		var forceLength = force.length()
+		force = force.normalized() * (forceLength - 4) * delta
+		node1.linear_velocity += force
+		node2.linear_velocity += -force
 
 
 func loadJSON(filename):
@@ -57,5 +64,9 @@ func loadJSON(filename):
 		for edge in node.edges:
 			var edgeObject = EdgeClass.instance()
 			$Edges.add_child(edgeObject)
-			if edge in nodesByName:
-				edges.append([edgeObject, nodesByName[node.name], nodesByName[edge]])
+			if edge != node.name and edge in nodesByName:
+				var node1 = nodesByName[node.name]
+				var node2 = nodesByName[edge]
+				#edgeObject.set_node_a(node1.get_path())
+				#edgeObject.set_node_b(node2.get_path())
+				edges.append([edgeObject, node1, node2])

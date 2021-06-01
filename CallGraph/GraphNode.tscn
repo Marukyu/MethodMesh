@@ -1,8 +1,30 @@
-[gd_scene format=2]
+[gd_scene load_steps=3 format=2]
 
-[node name="GraphNode" type="Spatial"]
+[sub_resource type="SphereShape" id=1]
+radius = 0.5
+
+[sub_resource type="SphereShape" id=2]
+radius = 0.35
+
+[node name="GraphNode" type="RigidBody"]
+collision_mask = 0
 
 [node name="CSGSphere" type="CSGSphere" parent="."]
 transform = Transform( 1, 0, 0, 0, 0.535399, -0.844599, 0, 0.844599, 0.535399, 0, 0, 0 )
-radius = 0.356
+radius = 0.096
 rings = 4
+
+[node name="RepulsionArea" type="Area" parent="."]
+input_ray_pickable = false
+space_override = 1
+gravity_point = true
+gravity_distance_scale = 10.0
+gravity_vec = Vector3( 0, 0, 0 )
+gravity = -10.0
+collision_layer = 0
+
+[node name="RepulsionRadius" type="CollisionShape" parent="RepulsionArea"]
+shape = SubResource( 1 )
+
+[node name="CollisionSphere" type="CollisionShape" parent="."]
+shape = SubResource( 2 )

@@ -43,7 +43,7 @@ albedo_texture = ExtResource( 1 )
 
 [sub_resource type="QuadMesh" id=7]
 material = SubResource( 6 )
-size = Vector2( 0.2, 2 )
+size = Vector2( 0.049, 0.716 )
 
 [sub_resource type="SpatialMaterial" id=8]
 flags_transparent = true
@@ -65,4 +65,5 @@ draw_pass_1 = SubResource( 7 )
 
 [node name="Barrel" type="CSGCylinder" parent="."]
 transform = Transform( 0.033, 0, 0, 0, -3.49691e-07, 0.033, 0, -8, -1.44248e-09, 0, 0, -4 )
+radius = 0.15
 material = SubResource( 8 )
