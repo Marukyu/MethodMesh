@@ -31,7 +31,7 @@ func _ready():
 		initVR()
 	else:
 		get_parent().find_node("GUIPanel3D").queue_free()
-		get_parent().call_deferred("add_child", GUIType.instance())
+		#get_parent().call_deferred("add_child", GUIType.instance())
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -53,7 +53,7 @@ func _input(event):
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_VISIBLE && event is InputEventMouseMotion:
 			_camera.rotation_degrees.y -= (event.relative.x * 0.15)
-			_camera.rotation_degrees.x -= (event.relative.y * 0.2)
+			_camera.rotation_degrees.x = clamp(_camera.rotation_degrees.x - event.relative.y * 0.2, -90, 90)
 
 
 func _notification(event):
