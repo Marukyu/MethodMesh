@@ -34,9 +34,11 @@ var edges = []
 var bidiEdges = []
 var nodeDistances = {}
 
+var cameraPosition = Vector3(0, 0, 0)
+
 
 func connectNodes(node1, node2, edge):
-	edge.look_at_from_position(node1.translation, node2.translation, Vector3.UP)
+	edge.look_at_from_position(node1.translation, node2.translation, node1.translation - cameraPosition)
 	edge.translation = node1.translation
 	edge.scale.z = (node1.translation.distance_to(node2.translation) / 8)
 
@@ -100,6 +102,7 @@ func connectAllNodes():
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
+	cameraPosition = get_viewport().get_camera().translation
 	# Force fixed framerate
 	delta = 1 / 60.0
 	if velocityFactor > 0.0001:
@@ -107,7 +110,7 @@ func _process(delta):
 		processOverlap(delta)
 		processEdgeConstraints(delta)
 		applyVelocity(delta)
-		connectAllNodes()
+	connectAllNodes()
 
 
 func loadJSON(filename):
@@ -129,7 +132,7 @@ func loadJSON(filename):
 	edges = []
 	bidiEdges = []
 	nodeDistances = {}
-	
+
 	velocityFactor = 1
 
 	for node in json.nodes:

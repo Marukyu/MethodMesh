@@ -4,7 +4,7 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := false
+var enableVR := true
 
 onready var _camera = $XRCamera
 onready var _camera_near_scale = _camera.near

@@ -25,8 +25,7 @@ flag_rotate_y = true
 direction = Vector3( 0, 1, 0 )
 spread = 0.0
 gravity = Vector3( 0, 0, 0 )
-initial_velocity = 4.57
-initial_velocity_random = 0.23
+initial_velocity = 4.63
 damping = 0.54
 angle = 0.4
 angle_random = 0.67
@@ -36,26 +35,36 @@ color_ramp = SubResource( 2 )
 [sub_resource type="SpatialMaterial" id=6]
 flags_transparent = true
 flags_unshaded = true
+flags_do_not_receive_shadows = true
+flags_disable_ambient_light = true
 vertex_color_use_as_albedo = true
+params_specular_mode = 4
 params_cull_mode = 2
+params_depth_draw_mode = 2
 params_billboard_mode = 2
 albedo_texture = ExtResource( 1 )
+distance_fade_mode = 1
+distance_fade_min_distance = 5.0
+distance_fade_max_distance = 0.0
 
 [sub_resource type="QuadMesh" id=7]
 material = SubResource( 6 )
-size = Vector2( 0.049, 0.716 )
+size = Vector2( 0.052, 0.563 )
 
 [sub_resource type="SpatialMaterial" id=8]
 flags_transparent = true
 flags_unshaded = true
 flags_vertex_lighting = true
 flags_disable_ambient_light = true
-albedo_color = Color( 0.968627, 0.854902, 0.556863, 0.247059 )
+albedo_color = Color( 0.968627, 0.854902, 0.556863, 0.2 )
+distance_fade_mode = 1
+distance_fade_min_distance = 0.0
+distance_fade_max_distance = 5.0
 
 [node name="Edge" type="Spatial"]
 
 [node name="Particles" type="Particles" parent="."]
-transform = Transform( 1, -1.01146e-05, 2.79456e-05, -2.79456e-05, 0.000154199, 1, -1.01146e-05, -1, 0.000154199, 0, 0, 0 )
+transform = Transform( 1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0 )
 amount = 45
 lifetime = 2.0
 preprocess = 2.0
@@ -65,5 +74,7 @@ draw_pass_1 = SubResource( 7 )
 
 [node name="Barrel" type="CSGCylinder" parent="."]
 transform = Transform( 0.033, 0, 0, 0, -3.49691e-07, 0.033, 0, -8, -1.44248e-09, 0, 0, -4 )
-radius = 0.15
+radius = 0.25
+cone = true
+smooth_faces = false
 material = SubResource( 8 )
