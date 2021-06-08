@@ -1,0 +1,17 @@
+[gd_resource type="SpatialMaterial" format=2]
+
+[resource]
+render_priority = -1
+params_depth_draw_mode = 1
+albedo_color = Color( 0.894118, 0.67451, 0.235294, 1 )
+metallic = 0.81
+metallic_specular = 0.57
+roughness = 0.24
+rim_enabled = true
+rim = 1.0
+rim_tint = 0.5
+anisotropy_enabled = true
+anisotropy = 0.39
+distance_fade_mode = 1
+distance_fade_min_distance = 20.0
+distance_fade_max_distance = 3.0

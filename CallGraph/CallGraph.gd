@@ -34,6 +34,8 @@ var edges = []
 var bidiEdges = []
 var nodeDistances = {}
 
+var focusNode = null
+
 var cameraPosition = Vector3(0, 0, 0)
 
 
@@ -80,7 +82,10 @@ func processEdgeConstraints(delta):
 		var node1 = edge[0]
 		var node2 = edge[1]
 		var force = (node2.translation - node1.translation)
-		var forceLength = clamp((force.length() - springLength) * springFactor, -springMax, springMax)
+		var effectiveSpringLength = springLength
+		if node1 == focusNode || node2 == focusNode:
+			effectiveSpringLength *= 0.5
+		var forceLength = clamp((force.length() - effectiveSpringLength) * springFactor, -springMax, springMax)
 		force = force.normalized() * forceLength * delta
 		nodeVel[node1] += force / (nodeEdgeCount[node1] + 2) * springFactorOutgoing
 		nodeVel[node2] -= force / (nodeEdgeCount[node2] + 2) * springFactorIncoming
@@ -92,8 +97,15 @@ func applyVelocity(delta):
 
 	velocityFactor = velocityFactor * clamp(meanSquareError / nodeList.size() * convergenceRate + (1 - convergenceRate), 0, 1)
 
+	var origin = Vector3(0, 0, 0)
+	if focusNode != null:
+		origin = focusNode.translation
+
 	for node in nodeList:
-		node.translation += (nodeVel[node] - node.translation * delta * originFactor) * velocityFactor
+		node.translation += (nodeVel[node] + (origin - node.translation) * delta * originFactor) * velocityFactor
+
+	if focusNode != null:
+		focusNode.translation = origin
 
 func connectAllNodes():
 	for edge in edges:

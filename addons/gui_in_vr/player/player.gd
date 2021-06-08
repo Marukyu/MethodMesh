@@ -4,20 +4,22 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := true
+var enableVR := false
 
 onready var _camera = $XRCamera
 onready var _camera_near_scale = _camera.near
 onready var _camera_far_scale = _camera.far
 
 var GUIType = preload("res://addons/gui_in_vr/gui.tscn")
+var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
+var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
 
 func initVR():
 	var vr = XRServer.find_interface("OpenVR")
 	if vr and vr.initialize():
 		var viewport = get_viewport()
 		viewport.arvr = true
-		viewport.hdr = false
+		#viewport.hdr = false
 		OS.set_window_maximized(true)
 		OS.vsync_enabled = false
 		Engine.target_fps = 180
@@ -31,6 +33,7 @@ func _ready():
 		initVR()
 	else:
 		get_parent().find_node("GUIPanel3D").queue_free()
+		get_parent().find_node("Crosshair").show()
 		#get_parent().call_deferred("add_child", GUIType.instance())
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -62,7 +65,20 @@ func _notification(event):
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 
+func setFocusNode(node):
+	var callGraph = get_parent().find_node("CallGraph")
+	var focusNode = callGraph.focusNode
+	if node == focusNode:
+		return
+	if focusNode:
+		focusNode.find_node("MeshInstance").set_surface_material(0, NodeMaterial)
+	focusNode = node
+	focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
+	callGraph.focusNode = focusNode
+	callGraph.velocityFactor = 0.5
+
 func processNonVR(delta):
+	get_parent().find_node("Crosshair").position = get_viewport().size / 2
 	var speed = delta * 2
 	if Input.is_key_pressed(KEY_SHIFT):
 		speed *= 3
@@ -74,6 +90,10 @@ func processNonVR(delta):
 		_camera.translate_object_local(Vector3(0, 0, -speed))
 	if Input.is_action_pressed("move_backward"):
 		_camera.translate_object_local(Vector3(0, 0, speed))
+	var collider = $XRCamera/RayCast.get_collider()
+	if collider:
+		if Input.is_action_just_pressed("select_focus_node"):
+			setFocusNode(collider.get_parent())
 
 
 func _process(delta):

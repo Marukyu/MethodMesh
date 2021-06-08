@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://addons/gui_in_vr/player/player.tscn" type="PackedScene" id=1]
 [ext_resource path="res://CallGraph/CallGraph.tscn" type="PackedScene" id=2]
+[ext_resource path="res://crosshair.png" type="Texture" id=3]
 [ext_resource path="res://addons/gui_in_vr/gui_panel_3d.tscn" type="PackedScene" id=4]
 
 [node name="World" type="Spatial"]
@@ -16,3 +17,8 @@ transform = Transform( 1, 0, 0, 0, -0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0 )
 
 [node name="CallGraph" parent="." instance=ExtResource( 2 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3.90179 )
+
+[node name="Crosshair" type="Sprite" parent="."]
+visible = false
+position = Vector2( 512, 300 )
+texture = ExtResource( 3 )

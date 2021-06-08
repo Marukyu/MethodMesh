@@ -9,6 +9,12 @@ script = ExtResource( 1 )
 [node name="XRCamera" type="ARVRCamera" parent="."]
 far = 1000.0
 
+[node name="RayCast" type="RayCast" parent="XRCamera"]
+enabled = true
+cast_to = Vector3( 0, 0, -1000 )
+collide_with_areas = true
+collide_with_bodies = false
+
 [node name="LeftController" parent="." instance=ExtResource( 2 )]
 
 [node name="RightController" parent="." instance=ExtResource( 2 )]
