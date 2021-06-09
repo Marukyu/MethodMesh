@@ -8,6 +8,7 @@
 [node name="World" type="Spatial"]
 
 [node name="Player" parent="." instance=ExtResource( 1 )]
+callGraphPath = NodePath("../CallGraph")
 
 [node name="GUIPanel3D" parent="." instance=ExtResource( 4 )]
 transform = Transform( 0, 0, -2, 0, 2, 0, 2, 0, 0, 0.5, 1.4, 0 )

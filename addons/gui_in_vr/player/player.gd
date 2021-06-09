@@ -4,7 +4,7 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := true
+var enableVR := false
 
 var holdLT = false
 var holdRT = false
@@ -14,6 +14,7 @@ onready var _camera_near_scale = _camera.near
 onready var _camera_far_scale = _camera.far
 
 var GUIType = preload("res://addons/gui_in_vr/gui.tscn")
+export(NodePath) var callGraphPath
 
 func initVR():
 	var vr = XRServer.find_interface("OpenVR")
@@ -35,7 +36,9 @@ func _ready():
 	else:
 		get_parent().find_node("GUIPanel3D").queue_free()
 		get_parent().find_node("Crosshair").show()
-		#get_parent().call_deferred("add_child", GUIType.instance())
+		var gui = GUIType.instance()
+		get_parent().call_deferred("add_child", gui)
+		gui.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -84,8 +87,8 @@ func processVR(delta):
 
 func _input(event):
 	if !enableVR:
-		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && event is InputEventMouseButton:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		#if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && event is InputEventMouseButton:
+		#	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_VISIBLE && event is InputEventMouseMotion:
 			_camera.rotation_degrees.y -= (event.relative.x * 0.15)
 			_camera.rotation_degrees.x = clamp(_camera.rotation_degrees.x - event.relative.y * 0.2, -90, 90)
