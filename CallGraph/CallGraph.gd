@@ -43,12 +43,25 @@ var focusNode = null
 
 var cameraPosition = Vector3(0, 0, 0)
 
+var outColor = Color8(80, 220, 255)
+var inColor = Color8(240, 120, 80)
+var unrelatedColor = Color8(128, 128, 128)
+
 var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
 var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
+var NodeMaterialOut = preload("res://CallGraph/NodeMaterialOut.tres")
+var NodeMaterialIn = preload("res://CallGraph/NodeMaterialIn.tres")
+var NodeMaterialUnrelated = preload("res://CallGraph/NodeMaterialUnrelated.tres")
+
+var EdgeConeMaterial = preload("res://CallGraph/EdgeCone.tres")
+var EdgeConeMaterialOut = EdgeConeMaterial.duplicate()
+var EdgeConeMaterialIn = EdgeConeMaterial.duplicate()
+var EdgeConeMaterialUnrelated = EdgeConeMaterial.duplicate()
 
 var EdgeParticles = preload("res://CallGraph/EdgeParticles.tres")
 var EdgeParticlesOut = EdgeParticles.duplicate()
 var EdgeParticlesIn = EdgeParticles.duplicate()
+var EdgeParticlesUnrelated = EdgeParticles.duplicate()
 
 
 func connectNodes(node1, node2, edge):
@@ -60,11 +73,34 @@ func connectNodes(node1, node2, edge):
 func reset():
 	loadJSON("user://callgraph.json")
 
+func setAlpha(color, a):
+	return Color(color.r, color.g, color.b, a)
+
+func recolorGradient(gradTex, color):
+	gradTex = gradTex.duplicate()
+	var grad = gradTex.gradient.duplicate()
+	gradTex.gradient = grad
+	for i in range(grad.get_point_count()):
+		var col = grad.get_color(i)
+		col.r = color.r
+		col.g = color.g
+		col.b = color.b
+		grad.set_color(i, col)
+	return gradTex
+
+
+func recolorParticles(particles, color):
+	particles.trail_color_modifier = recolorGradient(particles.trail_color_modifier, color)
+	particles.color_ramp = recolorGradient(particles.color_ramp, color)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	EdgeParticlesOut.hue_variation = 0.7
-	EdgeParticlesIn.hue_variation = -0.7
+	EdgeConeMaterialIn.albedo_color = setAlpha(inColor, EdgeConeMaterialIn.albedo_color.a)
+	EdgeConeMaterialOut.albedo_color = setAlpha(outColor, EdgeConeMaterialOut.albedo_color.a)
+	EdgeConeMaterialUnrelated.albedo_color = setAlpha(unrelatedColor, EdgeConeMaterialUnrelated.albedo_color.a)
+	recolorParticles(EdgeParticlesOut, outColor)
+	recolorParticles(EdgeParticlesIn, inColor)
+	recolorParticles(EdgeParticlesUnrelated, unrelatedColor)
 	reset()
 
 
@@ -99,7 +135,7 @@ func processEdgeConstraints(delta):
 		var effectiveSpringLength = springLength
 		if node1 == focusNode || node2 == focusNode:
 			effectiveSpringLength *= 0.5
-		var forceLength = clamp((force.length() - effectiveSpringLength) * springFactor, -springMax, springMax)
+		var forceLength = clamp((force.length() - effectiveSpringLength) * springFactor, -springMax, springMax) * edge[2]
 		force = force.normalized() * forceLength * delta
 		nodeVel[node1] += force / (nodeEdgeCount[node1] + 2) * springFactorOutgoing
 		nodeVel[node2] -= force / (nodeEdgeCount[node2] + 2) * springFactorIncoming
@@ -111,12 +147,15 @@ func applyVelocity(delta):
 
 	velocityFactor = velocityFactor * clamp(meanSquareError / nodeList.size() * convergenceRate + (1 - convergenceRate), 0, 1)
 
+	var effectiveVelocityFactor = velocityFactor
+
 	var origin = Vector3(0, 0, 0)
 	if focusNode != null:
+		effectiveVelocityFactor *= 0.2
 		origin = focusNode.translation
 
 	for node in nodeList:
-		node.translation += (nodeVel[node] + (origin - node.translation) * delta * originFactor) * velocityFactor
+		node.translation += (nodeVel[node] + (origin - node.translation) * delta * originFactor) * effectiveVelocityFactor
 
 	if focusNode != null:
 		focusNode.translation = origin
@@ -167,35 +206,73 @@ func buildDistanceMap(start, edgeMap):
 
 func updateEdgeColors():
 	for edge in edges:
-		var distDiff = focusDistanceForward.get(edge[1], 10000) - focusDistanceBackward.get(edge[2], 10000)
 		var particles = edge[0].get_node("Particles")
+		var barrel = edge[0].get_node("Barrel")
+
+		if not (edge[1] in focusDistanceForward or edge[2] in focusDistanceBackward):
+			particles.process_material = EdgeParticlesUnrelated
+			barrel.material = EdgeConeMaterialUnrelated
+			continue
+
+		var distDiff = focusDistanceForward.get(edge[1], 10000) - focusDistanceBackward.get(edge[2], 10000)
 		if distDiff > 0:
 			particles.process_material = EdgeParticlesIn
+			barrel.material = EdgeConeMaterialIn
 		elif distDiff < 0:
 			particles.process_material = EdgeParticlesOut
+			barrel.material = EdgeConeMaterialOut
 		else:
 			particles.process_material = EdgeParticles
+			barrel.material = EdgeConeMaterial
+
+	# Update edge force multipliers
+	for edge in bidiEdges:
+		if edge[0] in focusDistanceForward or edge[1] in focusDistanceBackward:
+			edge[2] = 2
+		else:
+			edge[2] = 0.5
+
+	# Update node colors
+	for node in nodeList:
+		var mat = NodeMaterial
+		var sca = 1
+
+		if not (node in focusDistanceForward or node in focusDistanceBackward):
+			mat = NodeMaterialUnrelated
+			sca = 0.5
+		else:
+			var distF = focusDistanceForward.get(node, 10000)
+			var distB = focusDistanceBackward.get(node, 10000)
+			var distDiff = distF - distB
+			sca = (1 / (min(distF, distB) + 1)) * 0.25 + 0.75
+			if distDiff > 0:
+				mat = NodeMaterialIn
+			elif distDiff < 0:
+				mat = NodeMaterialOut
+		var mesh = node.get_node("MeshInstance")
+		mesh.set_surface_material(0, mat)
+		mesh.scale = Vector3(1, 1, 1) * sca
+
+	if focusNode:
+		focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
+		focusNode.find_node("MeshInstance").scale = Vector3(1, 1, 1) * 1.25
 
 
 func setFocusNode(node):
 	if node == focusNode:
 		return
 
-	if focusNode:
-		focusNode.find_node("MeshInstance").set_surface_material(0, NodeMaterial)
-
 	focusNode = node
 
 	if focusNode:
-		focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
 		focusDistanceForward = buildDistanceMap(focusNode, forwardEdges)
 		focusDistanceBackward = buildDistanceMap(focusNode, backwardEdges)
-		updateEdgeColors()
 	else:
 		focusDistanceForward = {}
 		focusDistanceBackward = {}
 
-	velocityFactor = 0.5
+	updateEdgeColors()
+	velocityFactor = 1
 
 
 func loadJSON(filename):
@@ -241,20 +318,24 @@ func loadJSON(filename):
 	for node in json.nodes:
 		for edge in node.edges:
 			if edge != node.name and node.name in nodesByName and edge in nodesByName:
-				var edgeObject = EdgeClass.instance()
-				$Edges.add_child(edgeObject)
 				var node1 = nodesByName[node.name]
 				var node2 = nodesByName[edge]
+				# Deduplicate (TODO: store as edge weight instead?)
+				if node2 in nodeDistances[node1] and nodeDistances[node1][node2] > 0:
+					continue
+
+				var edgeObject = EdgeClass.instance()
+				$Edges.add_child(edgeObject)
 				edges.append([edgeObject, node1, node2])
 				if node.name < edge:
-					bidiEdges.append([node1, node2])
+					bidiEdges.append([node1, node2, 1])
 				else:
-					bidiEdges.append([node2, node1])
+					bidiEdges.append([node2, node1, 1])
 				nodeEdgeCount[node1] += 1
 				nodeEdgeCount[node2] += 1
 				# TODO remove duplicate edges
 				nodeDistances[node1][node2] = 1
-				nodeDistances[node2][node1] = 1
+				nodeDistances[node2][node1] = -1
 				# Add to forward/backward edge list
 				forwardEdges[node1].append(node2)
 				backwardEdges[node2].append(node1)

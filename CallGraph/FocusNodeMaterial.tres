@@ -3,8 +3,8 @@
 [resource]
 render_priority = -1
 params_depth_draw_mode = 1
-albedo_color = Color( 0.894118, 0.67451, 0.235294, 1 )
-metallic = 0.81
+albedo_color = Color( 0.905882, 0.803922, 0.6, 1 )
+metallic = 0.19
 metallic_specular = 0.57
 roughness = 0.24
 rim_enabled = true
