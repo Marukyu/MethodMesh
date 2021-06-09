@@ -11,8 +11,6 @@ onready var _camera_near_scale = _camera.near
 onready var _camera_far_scale = _camera.far
 
 var GUIType = preload("res://addons/gui_in_vr/gui.tscn")
-var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
-var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
 
 func initVR():
 	var vr = XRServer.find_interface("OpenVR")
@@ -66,16 +64,7 @@ func _notification(event):
 
 
 func setFocusNode(node):
-	var callGraph = get_parent().find_node("CallGraph")
-	var focusNode = callGraph.focusNode
-	if node == focusNode:
-		return
-	if focusNode:
-		focusNode.find_node("MeshInstance").set_surface_material(0, NodeMaterial)
-	focusNode = node
-	focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
-	callGraph.focusNode = focusNode
-	callGraph.velocityFactor = 0.5
+	get_parent().find_node("CallGraph").setFocusNode(node)
 
 func processNonVR(delta):
 	get_parent().find_node("Crosshair").position = get_viewport().size / 2

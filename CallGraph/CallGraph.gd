@@ -33,10 +33,22 @@ var nodeList = []
 var edges = []
 var bidiEdges = []
 var nodeDistances = {}
+var forwardEdges = {}
+var backwardEdges = {}
+
+var focusDistanceForward = {}
+var focusDistanceBackward = {}
 
 var focusNode = null
 
 var cameraPosition = Vector3(0, 0, 0)
+
+var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
+var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
+
+var EdgeParticles = preload("res://CallGraph/EdgeParticles.tres")
+var EdgeParticlesOut = EdgeParticles.duplicate()
+var EdgeParticlesIn = EdgeParticles.duplicate()
 
 
 func connectNodes(node1, node2, edge):
@@ -51,6 +63,8 @@ func reset():
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	EdgeParticlesOut.hue_variation = 0.7
+	EdgeParticlesIn.hue_variation = -0.7
 	reset()
 
 
@@ -125,10 +139,71 @@ func _process(delta):
 	connectAllNodes()
 
 
+func buildDistanceMap(start, edgeMap):
+	var distanceMap = {}
+	var pending = {}
+	pending[start] = 0
+	while true:
+		# Find closest pending node
+		var current
+		for node in pending:
+			if current == null or pending[node] < pending[current]:
+				current = node
+
+		# No more pending nodes: we are done
+		if current == null:
+			return distanceMap
+
+		# Loop over edges
+		var dist = pending[current] + 1
+		for node in edgeMap[current]:
+			if node in pending:
+				pending[node] = min(pending[node], dist)
+			elif !(node in distanceMap):
+				pending[node] = dist
+		distanceMap[current] = pending[current]
+		pending.erase(current)
+
+
+func updateEdgeColors():
+	for edge in edges:
+		var distDiff = focusDistanceForward.get(edge[1], 10000) - focusDistanceBackward.get(edge[2], 10000)
+		var particles = edge[0].get_node("Particles")
+		if distDiff > 0:
+			particles.process_material = EdgeParticlesIn
+		elif distDiff < 0:
+			particles.process_material = EdgeParticlesOut
+		else:
+			particles.process_material = EdgeParticles
+
+
+func setFocusNode(node):
+	if node == focusNode:
+		return
+
+	if focusNode:
+		focusNode.find_node("MeshInstance").set_surface_material(0, NodeMaterial)
+
+	focusNode = node
+
+	if focusNode:
+		focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
+		focusDistanceForward = buildDistanceMap(focusNode, forwardEdges)
+		focusDistanceBackward = buildDistanceMap(focusNode, backwardEdges)
+		updateEdgeColors()
+	else:
+		focusDistanceForward = {}
+		focusDistanceBackward = {}
+
+	velocityFactor = 0.5
+
+
 func loadJSON(filename):
 	var file = File.new()
 	file.open(filename, File.READ)
 	var json = JSON.parse(file.get_as_text()).result
+
+	setFocusNode(null)
 
 	for n in $Nodes.get_children():
 		$Nodes.remove_child(n)
@@ -145,6 +220,9 @@ func loadJSON(filename):
 	bidiEdges = []
 	nodeDistances = {}
 
+	forwardEdges = {}
+	backwardEdges = {}
+
 	velocityFactor = 1
 
 	for node in json.nodes:
@@ -157,6 +235,8 @@ func loadJSON(filename):
 			nodeList.append(nodeObject)
 			nodeEdgeCount[nodeObject] = 0
 			nodeDistances[nodeObject] = {}
+			forwardEdges[nodeObject] = []
+			backwardEdges[nodeObject] = []
 
 	for node in json.nodes:
 		for edge in node.edges:
@@ -175,3 +255,6 @@ func loadJSON(filename):
 				# TODO remove duplicate edges
 				nodeDistances[node1][node2] = 1
 				nodeDistances[node2][node1] = 1
+				# Add to forward/backward edge list
+				forwardEdges[node1].append(node2)
+				backwardEdges[node2].append(node1)
