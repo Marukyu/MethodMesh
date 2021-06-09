@@ -15,14 +15,20 @@ bottom_radius = 0.02
 height = 0.01
 
 [sub_resource type="SpatialMaterial" id=3]
-albedo_color = Color( 1, 1, 1, 0 )
-refraction_enabled = true
-refraction_scale = 1.0
-refraction_texture_channel = 0
+flags_transparent = true
+flags_unshaded = true
+flags_do_not_receive_shadows = true
+flags_disable_ambient_light = true
+params_depth_draw_mode = 1
+albedo_color = Color( 0.435294, 0.858824, 0.443137, 0.403922 )
+distance_fade_mode = 1
+distance_fade_min_distance = 1000.0
+distance_fade_max_distance = 0.0
 
 [sub_resource type="CylinderMesh" id=4]
-top_radius = 1e-05
-bottom_radius = 0.0001
+top_radius = 0.001
+bottom_radius = 0.001
+height = 2000.0
 radial_segments = 6
 rings = 1
 
@@ -48,11 +54,12 @@ material/0 = null
 
 [node name="ControllerRayCast" type="RayCast" parent="."]
 enabled = true
-cast_to = Vector3( 0, 0, -2 )
+cast_to = Vector3( 0, 0, -1000 )
+collide_with_areas = true
 script = ExtResource( 2 )
 
 [node name="RayMesh" type="MeshInstance" parent="ControllerRayCast"]
-transform = Transform( 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, -1 )
+transform = Transform( 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, -999.95 )
 material_override = SubResource( 3 )
 cast_shadow = 0
 mesh = SubResource( 4 )

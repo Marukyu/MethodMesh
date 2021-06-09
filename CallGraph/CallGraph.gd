@@ -259,7 +259,7 @@ func updateEdgeColors():
 
 
 func setFocusNode(node):
-	if node == focusNode:
+	if node == focusNode || (node != null && node.get_parent() != $Nodes):
 		return
 
 	focusNode = node

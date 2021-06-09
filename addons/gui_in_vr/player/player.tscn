@@ -16,6 +16,7 @@ collide_with_areas = true
 collide_with_bodies = false
 
 [node name="LeftController" parent="." instance=ExtResource( 2 )]
+process_priority = 1
 
 [node name="RightController" parent="." instance=ExtResource( 2 )]
 controller_id = 2

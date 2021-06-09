@@ -45,9 +45,9 @@ func _base_controller_mesh_stuff():
 
 	# Attempt to load a mesh for this controller.
 	mesh = load_controller_mesh(controller_name)
-	touchpad_cylinder.visible = controller_name.find("vive") < 0
-	if !touchpad_cylinder.visible:
-		material_override = vive_material
+	#touchpad_cylinder.visible = controller_name.find("vive") < 0
+	#if !touchpad_cylinder.visible:
+	#	material_override = vive_material
 
 	# Make it visible.
 	_controller.visible = true

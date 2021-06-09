@@ -4,7 +4,10 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := false
+var enableVR := true
+
+var holdLT = false
+var holdRT = false
 
 onready var _camera = $XRCamera
 onready var _camera_near_scale = _camera.near
@@ -36,8 +39,30 @@ func _ready():
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
+func checkNodeCollision(raycast, press):
+	var collider = raycast.get_collider()
+	if collider:
+		if press:
+			setFocusNode(collider.get_parent())
 
-func processVR():
+
+func doControllerMovement(con, delta):
+	var movement = Vector3(con.get_joystick_axis(JOY_ANALOG_LX), 0, -con.get_joystick_axis(JOY_ANALOG_LY))
+	if movement.length() > 0.025:
+		movement = movement.normalized() * movement.length_squared() * delta * 3
+		movement = con.transform.basis.xform(movement)
+		translate(movement)
+		$LeftController.translate(movement)
+		$RightController.translate(movement)
+
+
+func _physics_process(delta):
+	if enableVR:
+		doControllerMovement($LeftController, delta)
+		doControllerMovement($RightController, delta)
+
+
+func processVR(delta):
 	var new_ws = XRServer.world_scale
 	if _ws != new_ws:
 		_ws = new_ws
@@ -46,6 +71,15 @@ func processVR():
 		var child_count = get_child_count()
 		for i in range(3, child_count):
 			get_child(i).scale = Vector3.ONE * _ws
+
+	var pressLT = ($LeftController.get_joystick_axis(JOY_VR_ANALOG_TRIGGER) > 0.6)
+	var pressRT = ($RightController.get_joystick_axis(JOY_VR_ANALOG_TRIGGER) > 0.6)
+
+	checkNodeCollision($LeftController/ControllerRayCast, pressLT && !holdLT)
+	checkNodeCollision($RightController/ControllerRayCast, pressRT && !holdRT)
+
+	holdLT = pressLT
+	holdRT = pressRT
 
 
 func _input(event):
@@ -79,14 +113,11 @@ func processNonVR(delta):
 		_camera.translate_object_local(Vector3(0, 0, -speed))
 	if Input.is_action_pressed("move_backward"):
 		_camera.translate_object_local(Vector3(0, 0, speed))
-	var collider = $XRCamera/RayCast.get_collider()
-	if collider:
-		if Input.is_action_just_pressed("select_focus_node"):
-			setFocusNode(collider.get_parent())
+	checkNodeCollision($XRCamera/RayCast, Input.is_action_just_pressed("select_focus_node"))
 
 
 func _process(delta):
 	if enableVR:
-		processVR()
+		processVR(delta)
 	else:
 		processNonVR(delta)
