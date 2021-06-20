@@ -35,6 +35,8 @@ var bidiEdges = []
 var nodeDistances = {}
 var forwardEdges = {}
 var backwardEdges = {}
+var nodeDetailTexts = {}
+var nodeDetailObjects = {}
 
 var focusDistanceForward = {}
 var focusDistanceBackward = {}
@@ -46,6 +48,8 @@ var cameraPosition = Vector3(0, 0, 0)
 var outColor = Color8(80, 220, 255)
 var inColor = Color8(240, 120, 80)
 var unrelatedColor = Color8(128, 128, 128)
+
+var DetailsPanel = preload("res://CallGraph/DetailsPanel.tscn")
 
 var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
 var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
@@ -258,9 +262,54 @@ func updateEdgeColors():
 		focusNode.find_node("MeshInstance").scale = Vector3(1, 1, 1) * 1.25
 
 
+func getDetails(node):
+	if node == null:
+		return null
+	else:
+		return nodeDetailObjects.get(node)
+
+
+func updateDetails(details):
+	var node = details.get_parent()
+	var detailText = nodeDetailTexts.get(node, "(Unknown)")
+	details.get_node("Viewport/Text").text = detailText
+	details.get_node("Viewport").render_target_update_mode = Viewport.UPDATE_ONCE
+
+
+func spawnDetails(node):
+	if getDetails(node) == null:
+		var details = DetailsPanel.instance()
+		node.add_child(details)
+		nodeDetailObjects[node] = details
+		updateDetails(details)
+
+func despawnDetails(node):
+	nodeDetailObjects[node] = null
+	var details = getDetails(node)
+	if details != null:
+		details.queue_free()
+
+
+func moveDetails(node1, node2):
+	if node1 == node2:
+		return
+	if node1 == null || node2 == null || getDetails(node1) == null || getDetails(node2) != null:
+		despawnDetails(node1)
+		spawnDetails(node2)
+	else:
+		var details = getDetails(node1)
+		nodeDetailObjects[node1] = null
+		nodeDetailObjects[node2] = details
+		node1.remove_child(details)
+		node2.add_child(details)
+		updateDetails(details)
+
+
 func setFocusNode(node):
 	if node == focusNode || (node != null && node.get_parent() != $Nodes):
 		return
+
+	moveDetails(focusNode, node)
 
 	focusNode = node
 
@@ -296,26 +345,42 @@ func loadJSON(filename):
 	edges = []
 	bidiEdges = []
 	nodeDistances = {}
+	nodeDetailTexts = {}
+	nodeDetailObjects = {}
 
 	forwardEdges = {}
 	backwardEdges = {}
 
 	velocityFactor = 1
 
+	# Trim orphans
+	var orphans = {}
 	for node in json.nodes:
-		# Skip "null function" node, because it doesn't actually call these functions
-		if node.name != "null function":
-			var nodeObject = NodeClass.instance()
-			nodeObject.translation = Vector3(rand_range(-5, 5), rand_range(-5, 5), rand_range(-5, 5))
-			$Nodes.add_child(nodeObject)
-			nodesByName[node.name] = nodeObject
-			nodeList.append(nodeObject)
-			nodeEdgeCount[nodeObject] = 0
-			nodeDistances[nodeObject] = {}
-			forwardEdges[nodeObject] = []
-			backwardEdges[nodeObject] = []
+		if node.edges.empty():
+			if not node.name in orphans:
+				orphans[node.name] = true
+		else:
+			for edge in node.edges:
+				orphans[edge] = false
 
 	for node in json.nodes:
+		if orphans.get(node.name, false):
+			continue
+		# TODO Skip "null function" node, because it doesn't actually call these functions
+		var nodeObject = NodeClass.instance()
+		nodeObject.translation = Vector3(rand_range(-5, 5), rand_range(-5, 5), rand_range(-5, 5))
+		$Nodes.add_child(nodeObject)
+		nodesByName[node.name] = nodeObject
+		nodeList.append(nodeObject)
+		nodeEdgeCount[nodeObject] = 0
+		nodeDistances[nodeObject] = {}
+		forwardEdges[nodeObject] = []
+		backwardEdges[nodeObject] = []
+		nodeDetailTexts[nodeObject] = node.simpleName
+
+	for node in json.nodes:
+		if orphans.get(node.name, false):
+			continue
 		for edge in node.edges:
 			if edge != node.name and node.name in nodesByName and edge in nodesByName:
 				var node1 = nodesByName[node.name]
@@ -339,3 +404,9 @@ func loadJSON(filename):
 				# Add to forward/backward edge list
 				forwardEdges[node1].append(node2)
 				backwardEdges[node2].append(node1)
+
+	if "main" in nodesByName:
+		var mainNode = nodesByName["main"]
+		mainNode.translation = Vector3(0, 0, 0)
+		setFocusNode(mainNode)
+

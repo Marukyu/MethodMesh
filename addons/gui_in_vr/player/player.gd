@@ -37,7 +37,7 @@ func _ready():
 		get_parent().find_node("GUIPanel3D").queue_free()
 		get_parent().find_node("Crosshair").show()
 		var gui = GUIType.instance()
-		get_parent().call_deferred("add_child", gui)
+		#get_parent().call_deferred("add_child", gui)
 		gui.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -87,8 +87,8 @@ func processVR(delta):
 
 func _input(event):
 	if !enableVR:
-		#if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && event is InputEventMouseButton:
-		#	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && event is InputEventMouseButton:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_VISIBLE && event is InputEventMouseMotion:
 			_camera.rotation_degrees.y -= (event.relative.x * 0.15)
 			_camera.rotation_degrees.x = clamp(_camera.rotation_degrees.x - event.relative.y * 0.2, -90, 90)
