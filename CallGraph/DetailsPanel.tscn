@@ -1,16 +1,23 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://CallGraph/NotoSans-Regular.ttf" type="DynamicFontData" id=1]
+[ext_resource path="res://CallGraph/DetailsPanel.gd" type="Script" id=2]
+
+[sub_resource type="Curve" id=6]
+_data = [ Vector2( 0, 0 ), 0.0, 2.03043, 0, 0, Vector2( 1, 1 ), 0.0, 0.0, 0, 0 ]
+
+[sub_resource type="Curve" id=7]
+_data = [ Vector2( 0, 1 ), 0.0, -0.779221, 0, 1, Vector2( 0.729167, 0.0636363 ), -0.45933, -0.45933, 0, 0, Vector2( 1, 0 ), -0.212285, 0.0, 0, 0 ]
+
+[sub_resource type="Curve" id=8]
+_data = [ Vector2( 0, 1 ), 0.0, 0.0323232, 0, 0, Vector2( 1, 0.309091 ), -2.07792, 0.0, 0, 0 ]
 
 [sub_resource type="DynamicFont" id=1]
-size = 32
+size = 64
 font_data = ExtResource( 1 )
 
-[sub_resource type="BoxShape" id=2]
-extents = Vector3( 0.2, 0.05, 0.01 )
-
 [sub_resource type="QuadMesh" id=3]
-size = Vector2( 0.4, 0.1 )
+size = Vector2( 0.8, 0.1 )
 
 [sub_resource type="ViewportTexture" id=4]
 viewport_path = NodePath("Viewport")
@@ -22,10 +29,16 @@ flags_unshaded = true
 flags_albedo_tex_force_srgb = true
 albedo_texture = SubResource( 4 )
 
-[node name="DetailsPanel" type="StaticBody"]
+[node name="DetailsPanel" type="Spatial"]
+script = ExtResource( 2 )
+distanceScale = SubResource( 6 )
+cameraLerpFactorAngle = SubResource( 7 )
+cameraLerpFactorDistance = SubResource( 8 )
+distanceFactorIn = 10.3
+distanceFactorOut = 15.2
 
 [node name="Viewport" type="Viewport" parent="."]
-size = Vector2( 1280, 320 )
+size = Vector2( 2048, 256 )
 transparent_bg = true
 hdr = false
 usage = 0
@@ -36,9 +49,6 @@ render_target_update_mode = 1
 margin_right = 40.0
 margin_bottom = 40.0
 custom_fonts/font = SubResource( 1 )
-
-[node name="CollisionShape" type="CollisionShape" parent="."]
-shape = SubResource( 2 )
 
 [node name="Quad" type="MeshInstance" parent="."]
 mesh = SubResource( 3 )

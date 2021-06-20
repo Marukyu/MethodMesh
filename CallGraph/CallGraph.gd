@@ -67,6 +67,7 @@ var EdgeParticlesOut = EdgeParticles.duplicate()
 var EdgeParticlesIn = EdgeParticles.duplicate()
 var EdgeParticlesUnrelated = EdgeParticles.duplicate()
 
+var fadedMaterials = {}
 
 func connectNodes(node1, node2, edge):
 	edge.look_at_from_position(node1.translation, node2.translation, node1.translation - cameraPosition)
@@ -80,22 +81,36 @@ func reset():
 func setAlpha(color, a):
 	return Color(color.r, color.g, color.b, a)
 
-func recolorGradient(gradTex, color):
+func fadeAlpha(color, fade):
+	return Color(color.r, color.g, color.b, color.a * fade)
+
+func recolorGradient(gradTex, color, fade):
 	gradTex = gradTex.duplicate()
 	var grad = gradTex.gradient.duplicate()
 	gradTex.gradient = grad
 	for i in range(grad.get_point_count()):
 		var col = grad.get_color(i)
-		col.r = color.r
-		col.g = color.g
-		col.b = color.b
+		if color != null:
+			col.r = color.r
+			col.g = color.g
+			col.b = color.b
+		col.a = col.a * fade
 		grad.set_color(i, col)
 	return gradTex
 
+func recolorParticles(particles, color = null, fade = 1):
+	particles.trail_color_modifier = recolorGradient(particles.trail_color_modifier, color, fade)
+	particles.color_ramp = recolorGradient(particles.color_ramp, color, fade)
 
-func recolorParticles(particles, color):
-	particles.trail_color_modifier = recolorGradient(particles.trail_color_modifier, color)
-	particles.color_ramp = recolorGradient(particles.color_ramp, color)
+func getFadedMaterial(mat):
+	if not mat in fadedMaterials:
+		var faded = mat.duplicate()
+		if faded is ParticlesMaterial:
+			recolorParticles(faded, null, 0.4)
+		if faded is SpatialMaterial:
+			faded.albedo_color = fadeAlpha(faded.albedo_color, 0.4)
+		fadedMaterials[mat] = faded
+	return fadedMaterials[mat]
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -180,6 +195,7 @@ func _process(delta):
 		processEdgeConstraints(delta)
 		applyVelocity(delta)
 	connectAllNodes()
+	#rotateDetailsToCamera()
 
 
 func buildDistanceMap(start, edgeMap):
@@ -214,11 +230,14 @@ func updateEdgeColors():
 		var barrel = edge[0].get_node("Barrel")
 
 		if not (edge[1] in focusDistanceForward or edge[2] in focusDistanceBackward):
-			particles.process_material = EdgeParticlesUnrelated
-			barrel.material = EdgeConeMaterialUnrelated
+			particles.process_material = getFadedMaterial(EdgeParticlesUnrelated)
+			barrel.material = getFadedMaterial(EdgeConeMaterialUnrelated)
 			continue
 
-		var distDiff = focusDistanceForward.get(edge[1], 10000) - focusDistanceBackward.get(edge[2], 10000)
+		var distF = focusDistanceForward.get(edge[1], 10000)
+		var distB = focusDistanceBackward.get(edge[2], 10000)
+
+		var distDiff = distF - distB
 		if distDiff > 0:
 			particles.process_material = EdgeParticlesIn
 			barrel.material = EdgeConeMaterialIn
@@ -228,6 +247,10 @@ func updateEdgeColors():
 		else:
 			particles.process_material = EdgeParticles
 			barrel.material = EdgeConeMaterial
+
+		if min(distF, distB) > 0:
+			particles.process_material = getFadedMaterial(particles.process_material)
+			barrel.material = getFadedMaterial(barrel.material)
 
 	# Update edge force multipliers
 	for edge in bidiEdges:
@@ -242,7 +265,7 @@ func updateEdgeColors():
 		var sca = 1
 
 		if not (node in focusDistanceForward or node in focusDistanceBackward):
-			mat = NodeMaterialUnrelated
+			mat = getFadedMaterial(NodeMaterialUnrelated)
 			sca = 0.5
 		else:
 			var distF = focusDistanceForward.get(node, 10000)
@@ -253,6 +276,8 @@ func updateEdgeColors():
 				mat = NodeMaterialIn
 			elif distDiff < 0:
 				mat = NodeMaterialOut
+			if min(distF, distB) > 1:
+				mat = getFadedMaterial(mat)
 		var mesh = node.get_node("MeshInstance")
 		mesh.set_surface_material(0, mat)
 		mesh.scale = Vector3(1, 1, 1) * sca
@@ -269,25 +294,38 @@ func getDetails(node):
 		return nodeDetailObjects.get(node)
 
 
-func updateDetails(details):
-	var node = details.get_parent()
-	var detailText = nodeDetailTexts.get(node, "(Unknown)")
-	details.get_node("Viewport/Text").text = detailText
-	details.get_node("Viewport").render_target_update_mode = Viewport.UPDATE_ONCE
+func updateDetails(node, details):
+	details.update(nodeDetailTexts.get(node, "(Unknown)"))
+	#var node = details.get_parent()
+	#var detailText = nodeDetailTexts.get(node, "(Unknown)")
+	#details.scale = Vector3(1, 1, 1) * 5
+	#var mesh = node.get_node("MeshInstance")
+	#var quad = details.get_node("Quad")
+	#quad.translation.x = quad.mesh.size.x / 2 + (mesh.mesh.radius * mesh.scale.x + 0.02) / details.scale.x
+	#details.get_node("Viewport/Text").text = detailText
+	#details.get_node("Viewport").render_target_update_mode = Viewport.UPDATE_ONCE
+
+#func rotateDetailsToCamera():
+#	for node in nodeDetailObjects:
+#		var detail = nodeDetailObjects[node]
+#		detail.look_at(cameraPosition, Vector3.UP)
+#		detail.rotate_object_local(Vector3(0, 1, 0), PI)
+#		detail.scale = Vector3(1, 1, 1) * (detail.to_global(Vector3(0, 0, 0)) - cameraPosition).length() * 5
 
 
 func spawnDetails(node):
-	if getDetails(node) == null:
+	if node != null && getDetails(node) == null:
 		var details = DetailsPanel.instance()
 		node.add_child(details)
 		nodeDetailObjects[node] = details
-		updateDetails(details)
+		updateDetails(node, details)
 
 func despawnDetails(node):
-	nodeDetailObjects[node] = null
-	var details = getDetails(node)
-	if details != null:
-		details.queue_free()
+	if node != null:
+		nodeDetailObjects.erase(node)
+		var details = getDetails(node)
+		if details != null:
+			details.queue_free()
 
 
 func moveDetails(node1, node2):
@@ -302,15 +340,14 @@ func moveDetails(node1, node2):
 		nodeDetailObjects[node2] = details
 		node1.remove_child(details)
 		node2.add_child(details)
-		updateDetails(details)
+		updateDetails(node2, details)
 
 
 func setFocusNode(node):
 	if node == focusNode || (node != null && node.get_parent() != $Nodes):
 		return
 
-	moveDetails(focusNode, node)
-
+	var oldNode = focusNode
 	focusNode = node
 
 	if focusNode:
@@ -321,6 +358,9 @@ func setFocusNode(node):
 		focusDistanceBackward = {}
 
 	updateEdgeColors()
+
+	moveDetails(oldNode, focusNode)
+
 	velocityFactor = 1
 
 
@@ -407,6 +447,6 @@ func loadJSON(filename):
 
 	if "main" in nodesByName:
 		var mainNode = nodesByName["main"]
-		mainNode.translation = Vector3(0, 0, 0)
+		mainNode.translation /= 1000
 		setFocusNode(mainNode)
 
