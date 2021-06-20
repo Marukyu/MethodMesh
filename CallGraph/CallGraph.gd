@@ -42,6 +42,7 @@ var focusDistanceForward = {}
 var focusDistanceBackward = {}
 
 var focusNode = null
+var hoverNodes = {}
 
 var cameraPosition = Vector3(0, 0, 0)
 
@@ -296,58 +297,45 @@ func getDetails(node):
 
 func updateDetails(node, details):
 	details.update(nodeDetailTexts.get(node, "(Unknown)"))
-	#var node = details.get_parent()
-	#var detailText = nodeDetailTexts.get(node, "(Unknown)")
-	#details.scale = Vector3(1, 1, 1) * 5
-	#var mesh = node.get_node("MeshInstance")
-	#var quad = details.get_node("Quad")
-	#quad.translation.x = quad.mesh.size.x / 2 + (mesh.mesh.radius * mesh.scale.x + 0.02) / details.scale.x
-	#details.get_node("Viewport/Text").text = detailText
-	#details.get_node("Viewport").render_target_update_mode = Viewport.UPDATE_ONCE
-
-#func rotateDetailsToCamera():
-#	for node in nodeDetailObjects:
-#		var detail = nodeDetailObjects[node]
-#		detail.look_at(cameraPosition, Vector3.UP)
-#		detail.rotate_object_local(Vector3(0, 1, 0), PI)
-#		detail.scale = Vector3(1, 1, 1) * (detail.to_global(Vector3(0, 0, 0)) - cameraPosition).length() * 5
 
 
-func spawnDetails(node):
-	if node != null && getDetails(node) == null:
-		var details = DetailsPanel.instance()
-		node.add_child(details)
-		nodeDetailObjects[node] = details
-		updateDetails(node, details)
-
-func despawnDetails(node):
-	if node != null:
-		nodeDetailObjects.erase(node)
-		var details = getDetails(node)
-		if details != null:
-			details.queue_free()
+func updateDetailPriority(node):
+	var maxDetail = null
+	for detail in nodeDetailObjects.values():
+		if detail.get_parent() == node:
+			if maxDetail == null || detail.scale.x > maxDetail.scale.x:
+				maxDetail = detail
+			detail.visible = false
+	if maxDetail != null:
+		maxDetail.visible = true
 
 
-func moveDetails(node1, node2):
-	if node1 == node2:
+func setDetails(id, node, sca = 1):
+	var details = nodeDetailObjects.get(id)
+	if details == null:
+		details = DetailsPanel.instance()
+		details.scaleFactor = sca
+		nodeDetailObjects[id] = details
+
+	var parent = details.get_parent()
+
+	if parent == node:
 		return
-	if node1 == null || node2 == null || getDetails(node1) == null || getDetails(node2) != null:
-		despawnDetails(node1)
-		spawnDetails(node2)
-	else:
-		var details = getDetails(node1)
-		nodeDetailObjects[node1] = null
-		nodeDetailObjects[node2] = details
-		node1.remove_child(details)
-		node2.add_child(details)
-		updateDetails(node2, details)
+
+	if parent != null:
+		parent.remove_child(details)
+		updateDetailPriority(parent)
+
+	if node != null:
+		node.add_child(details)
+		updateDetails(node, details)
+		updateDetailPriority(node)
 
 
 func setFocusNode(node):
 	if node == focusNode || (node != null && node.get_parent() != $Nodes):
 		return
 
-	var oldNode = focusNode
 	focusNode = node
 
 	if focusNode:
@@ -359,7 +347,7 @@ func setFocusNode(node):
 
 	updateEdgeColors()
 
-	moveDetails(oldNode, focusNode)
+	setDetails("focus", focusNode)
 
 	velocityFactor = 1
 
@@ -445,8 +433,10 @@ func loadJSON(filename):
 				forwardEdges[node1].append(node2)
 				backwardEdges[node2].append(node1)
 
+	for node in nodeDetailTexts:
+		nodeDetailTexts[node] += "\n[i][color=#ff8080]In: %s[/color] [color=#80ffff]Out: %s[/color][/i]" % [backwardEdges[node].size(), forwardEdges[node].size()]
+
 	if "main" in nodesByName:
 		var mainNode = nodesByName["main"]
 		mainNode.translation /= 1000
 		setFocusNode(mainNode)
-

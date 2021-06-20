@@ -45,6 +45,7 @@ func _ready():
 func checkNodeCollision(raycast, press):
 	var collider = raycast.get_collider()
 	if collider:
+		setHoverNode(raycast, collider.get_parent())
 		if press:
 			setFocusNode(collider.get_parent())
 
@@ -102,6 +103,9 @@ func _notification(event):
 
 func setFocusNode(node):
 	get_parent().find_node("CallGraph").setFocusNode(node)
+
+func setHoverNode(id, node):
+	get_parent().find_node("CallGraph").setDetails(id, node, 0.7)
 
 func processNonVR(delta):
 	get_parent().find_node("Crosshair").position = get_viewport().size / 2
