@@ -4,7 +4,7 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := false
+var enableVR := true
 
 var holdLT = false
 var holdRT = false
@@ -44,7 +44,7 @@ func _ready():
 
 func checkNodeCollision(raycast, press):
 	var collider = raycast.get_collider()
-	if collider:
+	if collider && collider.is_in_group("nodeHitbox"):
 		setHoverNode(raycast, collider.get_parent())
 		if press:
 			setFocusNode(collider.get_parent())

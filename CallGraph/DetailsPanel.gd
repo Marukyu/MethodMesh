@@ -22,7 +22,7 @@ func _ready():
 
 
 func updateQuad():
-	var cameraPosition = get_viewport().get_camera().translation
+	var cameraPosition = get_viewport().get_camera().translation + get_node("/root/World/Player").translation
 	var cameraDirection = get_viewport().get_camera().transform.basis.z
 	translation = Vector3(0, 0, 0)
 	look_at(cameraPosition, Vector3.UP)
@@ -30,7 +30,12 @@ func updateQuad():
 	var distance = (to_global(Vector3(0, 0, 0)) - cameraPosition).length()
 	var scaleFac = distanceScale.interpolate(distance / distanceFactorIn) * distanceFactorOut * scaleFactor
 	var dirFac = min(cameraLerpFactorDistance.interpolate(scaleFac / distance / 3), cameraLerpFactorAngle.interpolate(projX(transform.basis.z).angle_to(projX(cameraDirection)) / PI))
-	transform.basis = lerpBasis(transform.basis, get_viewport().get_camera().transform.basis, dirFac)
+	
+	var cameraMatrix = get_viewport().get_camera().transform.basis
+	cameraMatrix = cameraMatrix.rotated(Vector3.FORWARD, cameraMatrix.get_euler().z)
+	dirFac = 0 # TODO disable this in non-VR mode
+	
+	transform.basis = lerpBasis(transform.basis, cameraMatrix, dirFac)
 	scale = Vector3(1, 1, 1) * scaleFac
 	var quad = $Quad
 	quad.translation.x = quad.mesh.size.x / 2 + quadOffset / scale.x
