@@ -53,7 +53,7 @@ var unrelatedColor = Color8(128, 128, 128)
 var DetailsPanel = preload("res://CallGraph/DetailsPanel.tscn")
 
 var NodeMaterial = preload("res://CallGraph/NodeMaterial.tres")
-var FocusNodeMaterial = preload("res://CallGraph/FocusNodeMaterial.tres")
+var NodeMaterialFocused = preload("res://CallGraph/FocusNodeMaterial.tres")
 var NodeMaterialOut = preload("res://CallGraph/NodeMaterialOut.tres")
 var NodeMaterialIn = preload("res://CallGraph/NodeMaterialIn.tres")
 var NodeMaterialUnrelated = preload("res://CallGraph/NodeMaterialUnrelated.tres")
@@ -100,8 +100,9 @@ func recolorGradient(gradTex, color, fade):
 	return gradTex
 
 func recolorParticles(particles, color = null, fade = 1):
-	particles.trail_color_modifier = recolorGradient(particles.trail_color_modifier, color, fade)
-	particles.color_ramp = recolorGradient(particles.color_ramp, color, fade)
+	if particles:
+		particles.trail_color_modifier = recolorGradient(particles.trail_color_modifier, color, fade)
+		particles.color_ramp = recolorGradient(particles.color_ramp, color, fade)
 
 func getFadedMaterial(mat):
 	if not mat in fadedMaterials:
@@ -284,7 +285,7 @@ func updateEdgeColors():
 		mesh.scale = Vector3(1, 1, 1) * sca
 
 	if focusNode:
-		focusNode.find_node("MeshInstance").set_surface_material(0, FocusNodeMaterial)
+		focusNode.find_node("MeshInstance").set_surface_material(0, NodeMaterialFocused)
 		focusNode.find_node("MeshInstance").scale = Vector3(1, 1, 1) * 1.25
 
 

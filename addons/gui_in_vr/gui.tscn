@@ -1,7 +1,26 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://addons/gui_in_vr/guitheme.tres" type="Theme" id=1]
 [ext_resource path="res://addons/gui_in_vr/gui.gd" type="Script" id=2]
+
+[sub_resource type="StyleBoxFlat" id=1]
+bg_color = Color( 0.164706, 0.168627, 0.176471, 1 )
+border_width_top = 50
+border_color = Color( 0.105882, 0.105882, 0.145098, 1 )
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+expand_margin_top = 50.0
+
+[sub_resource type="Theme" id=2]
+WindowDialog/colors/title_color = Color( 1, 1, 1, 1 )
+WindowDialog/constants/close_h_ofs = 18
+WindowDialog/constants/close_v_ofs = 18
+WindowDialog/constants/scaleborder_size = 4
+WindowDialog/constants/title_height = 50
+WindowDialog/fonts/title_font = null
+WindowDialog/icons/close = null
+WindowDialog/icons/close_highlight = null
+WindowDialog/styles/panel = SubResource( 1 )
 
 [node name="GUI" type="Control"]
 margin_right = 1920.0
@@ -16,6 +35,9 @@ __meta__ = {
 [node name="Panel" type="VBoxContainer" parent="."]
 anchor_right = 1.0
 anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="DatasetContainer" type="HBoxContainer" parent="Panel"]
 margin_right = 1920.0
@@ -59,6 +81,93 @@ margin_left = 1797.0
 margin_right = 1920.0
 margin_bottom = 77.0
 text = "Load"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorContainer" type="HBoxContainer" parent="Panel"]
+margin_top = 81.0
+margin_right = 1920.0
+margin_bottom = 154.0
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="Panel/ColorContainer"]
+margin_top = 3.0
+margin_right = 300.0
+margin_bottom = 70.0
+rect_min_size = Vector2( 300, 0 )
+size_flags_horizontal = 8
+text = "Colors"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Neutral" type="Button" parent="Panel/ColorContainer"]
+margin_left = 304.0
+margin_right = 624.0
+margin_bottom = 73.0
+size_flags_horizontal = 3
+text = "Neutral"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Focused" type="Button" parent="Panel/ColorContainer"]
+margin_left = 628.0
+margin_right = 948.0
+margin_bottom = 73.0
+size_flags_horizontal = 3
+text = "Focused"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="In" type="Button" parent="Panel/ColorContainer"]
+margin_left = 952.0
+margin_right = 1272.0
+margin_bottom = 73.0
+size_flags_horizontal = 3
+text = "Incoming"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Out" type="Button" parent="Panel/ColorContainer"]
+margin_left = 1276.0
+margin_right = 1596.0
+margin_bottom = 73.0
+size_flags_horizontal = 3
+text = "Outgoing"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Unrelated" type="Button" parent="Panel/ColorContainer"]
+margin_left = 1600.0
+margin_right = 1920.0
+margin_bottom = 73.0
+size_flags_horizontal = 3
+text = "Unrelated"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorPickContainer" type="Control" parent="Panel"]
+margin_top = 158.0
+margin_right = 1920.0
+margin_bottom = 758.0
+rect_min_size = Vector2( 0, 600 )
+rect_clip_content = true
+
+[node name="ColorPicker" type="ColorPicker" parent="Panel/ColorPickContainer"]
+visible = false
+margin_left = 428.021
+margin_top = 9.49829
+margin_right = 1600.02
+margin_bottom = 1003.5
+size_flags_horizontal = 3
+presets_enabled = false
+presets_visible = false
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -158,12 +267,23 @@ margin_left = 144.887
 margin_top = 153.431
 margin_right = 1772.89
 margin_bottom = 987.431
-window_title = "Open a File"
+theme = SubResource( 2 )
+window_title = "Select dataset"
 mode = 0
 access = 1
+filters = PoolStringArray( "*.json;Call graphs" )
 current_dir = "user://"
 current_path = "user://"
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [connection signal="pressed" from="Panel/DatasetContainer/FileBrowserButton" to="." method="_on_FileBrowserButton_pressed"]
 [connection signal="pressed" from="Panel/DatasetContainer/LoadButton" to="." method="_on_LoadButton_pressed"]
+[connection signal="pressed" from="Panel/ColorContainer/Neutral" to="." method="_on_ColorButton_pressed" binds= [ "", "" ]]
+[connection signal="pressed" from="Panel/ColorContainer/Focused" to="." method="_on_ColorButton_pressed" binds= [ "Focused", false ]]
+[connection signal="pressed" from="Panel/ColorContainer/In" to="." method="_on_ColorButton_pressed" binds= [ "In", "In" ]]
+[connection signal="pressed" from="Panel/ColorContainer/Out" to="." method="_on_ColorButton_pressed" binds= [ "Out", "Out" ]]
+[connection signal="pressed" from="Panel/ColorContainer/Unrelated" to="." method="_on_ColorButton_pressed" binds= [ "Unrelated", "Unrelated" ]]
+[connection signal="color_changed" from="Panel/ColorPickContainer/ColorPicker" to="." method="_on_ColorPicker_color_changed"]
 [connection signal="file_selected" from="FileDialog" to="." method="_on_FileDialog_file_selected"]

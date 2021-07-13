@@ -4,10 +4,12 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := true
+var enableVR := false
 
 var holdLT = false
 var holdRT = false
+
+var gui2D
 
 onready var _camera = $XRCamera
 onready var _camera_near_scale = _camera.near
@@ -25,6 +27,7 @@ func initVR():
 		OS.set_window_maximized(true)
 		OS.vsync_enabled = false
 		Engine.target_fps = 180
+		get_parent().find_node("GUIPanel3D").find_node("Viewport").find_node("GUI").callgraph = callGraphPath
 	else:
 		printerr("Can't initialize OpenVR, exiting.")
 		get_tree().quit()
@@ -36,9 +39,11 @@ func _ready():
 	else:
 		get_parent().find_node("GUIPanel3D").queue_free()
 		get_parent().find_node("Crosshair").show()
-		var gui = GUIType.instance()
-		#get_parent().call_deferred("add_child", gui)
-		gui.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
+		gui2D = GUIType.instance()
+		get_parent().call_deferred("add_child", gui2D)
+		gui2D.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
+		gui2D.visible = false
+		gui2D.callgraph = callGraphPath
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -88,7 +93,7 @@ func processVR(delta):
 
 func _input(event):
 	if !enableVR:
-		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && event is InputEventMouseButton:
+		if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED && !gui2D.visible && event is InputEventMouseButton:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		if Input.get_mouse_mode() != Input.MOUSE_MODE_VISIBLE && event is InputEventMouseMotion:
 			_camera.rotation_degrees.y -= (event.relative.x * 0.15)
@@ -120,7 +125,11 @@ func processNonVR(delta):
 		_camera.translate_object_local(Vector3(0, 0, -speed))
 	if Input.is_action_pressed("move_backward"):
 		_camera.translate_object_local(Vector3(0, 0, speed))
-	checkNodeCollision($XRCamera/RayCast, Input.is_action_just_pressed("select_focus_node"))
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_VISIBLE:
+		checkNodeCollision($XRCamera/RayCast, Input.is_action_just_pressed("select_focus_node"))
+	if Input.is_action_just_pressed("toggle_menu"):
+		gui2D.visible = !gui2D.visible
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE if gui2D.visible else Input.MOUSE_MODE_CAPTURED)
 
 
 func _process(delta):
