@@ -52,7 +52,6 @@ var cameraPosition = Vector3(0, 0, 0)
 var outColor = Color8(80, 220, 255)
 var inColor = Color8(240, 120, 80)
 var unrelatedColor = Color8(128, 128, 128)
-var unrelatedAlpha = 0.5
 
 var DetailsPanel = preload("res://CallGraph/DetailsPanel.tscn")
 
@@ -122,10 +121,10 @@ func getFadedMaterial(mat):
 func _ready():
 	EdgeConeMaterialIn.albedo_color = setAlpha(inColor, EdgeConeMaterialIn.albedo_color.a)
 	EdgeConeMaterialOut.albedo_color = setAlpha(outColor, EdgeConeMaterialOut.albedo_color.a)
-	EdgeConeMaterialUnrelated.albedo_color = setAlpha(unrelatedColor, EdgeConeMaterialUnrelated.albedo_color.a * unrelatedAlpha)
+	EdgeConeMaterialUnrelated.albedo_color = setAlpha(unrelatedColor, EdgeConeMaterialUnrelated.albedo_color.a)
 	recolorParticles(EdgeParticlesOut, outColor)
 	recolorParticles(EdgeParticlesIn, inColor)
-	recolorParticles(EdgeParticlesUnrelated, unrelatedColor, unrelatedAlpha)
+	recolorParticles(EdgeParticlesUnrelated, unrelatedColor)
 	reset()
 
 
@@ -275,11 +274,14 @@ func buildDistanceMap(start, edgeMap):
 
 func updateEdgeColors():
 	for edge in edges:
-		var particles = edge[0].get_node("Particles")
+		var particles : Particles = edge[0].get_node("Particles")
 		var barrel = edge[0].get_node("Barrel")
 
-		if not (edge[1] in focusDistanceForward or edge[2] in focusDistanceBackward):
-			particles.process_material = getFadedMaterial(EdgeParticlesUnrelated)
+		var enabled = edge[1] in focusDistanceForward or edge[2] in focusDistanceBackward
+		particles.visible = enabled
+		particles.emitting = enabled
+		if !enabled:
+			#particles.process_material = getFadedMaterial(EdgeParticlesUnrelated)
 			barrel.material = getFadedMaterial(EdgeConeMaterialUnrelated)
 			continue
 

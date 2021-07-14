@@ -4,12 +4,15 @@ extends ARVROrigin
 const XRServer = ARVRServer
 
 var _ws := 1.0
-var enableVR := false
+var enableVR := true
 
 var holdLT = false
 var holdRT = false
 
+var holdMenu = false
+
 var gui2D
+var guiPanel : Spatial
 
 onready var _camera = $XRCamera
 onready var _camera_near_scale = _camera.near
@@ -27,7 +30,10 @@ func initVR():
 		OS.set_window_maximized(true)
 		OS.vsync_enabled = false
 		Engine.target_fps = 180
-		get_parent().find_node("GUIPanel3D").find_node("Viewport").find_node("GUI").callgraph = callGraphPath
+		guiPanel = get_parent().find_node("GUIPanel3D")
+		gui2D = guiPanel.find_node("Viewport").find_node("GUI")
+		gui2D.callgraph = get_node(callGraphPath).get_path()
+		gui2D.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
 	else:
 		printerr("Can't initialize OpenVR, exiting.")
 		get_tree().quit()
@@ -43,7 +49,7 @@ func _ready():
 		get_parent().call_deferred("add_child", gui2D)
 		gui2D.connect("datasetLoaded", get_node(callGraphPath), "loadJSON")
 		gui2D.visible = false
-		gui2D.callgraph = callGraphPath
+		gui2D.callgraph = get_node(callGraphPath).get_path()
 		Engine.target_fps = 60
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -71,6 +77,14 @@ func _physics_process(delta):
 		doControllerMovement($RightController, delta)
 
 
+func checkShowGuiPanel(con : ARVRController):
+	if con.is_button_pressed(JOY_BUTTON_1):
+		guiPanel.visible = !guiPanel.visible
+		#guiPanel.global_transform.origin = con.global_transform.origin
+		guiPanel.transform = _camera.global_transform
+		guiPanel.translate_object_local(Vector3.FORWARD * 1.75)
+		guiPanel.scale = Vector3(1, 1, 1) * 5
+
 func processVR(delta):
 	var new_ws = XRServer.world_scale
 	if _ws != new_ws:
@@ -89,6 +103,12 @@ func processVR(delta):
 
 	holdLT = pressLT
 	holdRT = pressRT
+
+	var pressMenu = $LeftController.is_button_pressed(JOY_BUTTON_1) || $RightController.is_button_pressed(JOY_BUTTON_1)
+	if pressMenu && !holdMenu:
+		checkShowGuiPanel($LeftController)
+		checkShowGuiPanel($RightController)
+	holdMenu = pressMenu
 
 
 func _input(event):
