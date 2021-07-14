@@ -80,7 +80,7 @@ func connectNodes(node1, node2, edge):
 
 
 func reset():
-	loadJSON("user://callgraph.json")
+	loadJSON("res://dataset/callgraph.json")
 
 func setAlpha(color, a):
 	return Color(color.r, color.g, color.b, a)
