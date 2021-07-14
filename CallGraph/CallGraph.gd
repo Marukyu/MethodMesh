@@ -7,7 +7,7 @@ extends Spatial
 
 var time = 0
 
-const radius = 4
+const invRadius = 1.0 / 3.0
 const minRepulse = 0
 const maxRepulse = 10
 
@@ -28,10 +28,13 @@ var EdgeClass = preload("res://CallGraph/Edge.tscn")
 
 var nodesByName = {}
 var nodeVel = {}
+var nodeOverlap = {}
 var nodeEdgeCount = {}
 var nodeList = []
+var awakeNodes = []
 var edges = []
 var bidiEdges = []
+var awakeEdges = []
 var nodeDistances = {}
 var forwardEdges = {}
 var backwardEdges = {}
@@ -49,6 +52,7 @@ var cameraPosition = Vector3(0, 0, 0)
 var outColor = Color8(80, 220, 255)
 var inColor = Color8(240, 120, 80)
 var unrelatedColor = Color8(128, 128, 128)
+var unrelatedAlpha = 0.5
 
 var DetailsPanel = preload("res://CallGraph/DetailsPanel.tscn")
 
@@ -118,10 +122,10 @@ func getFadedMaterial(mat):
 func _ready():
 	EdgeConeMaterialIn.albedo_color = setAlpha(inColor, EdgeConeMaterialIn.albedo_color.a)
 	EdgeConeMaterialOut.albedo_color = setAlpha(outColor, EdgeConeMaterialOut.albedo_color.a)
-	EdgeConeMaterialUnrelated.albedo_color = setAlpha(unrelatedColor, EdgeConeMaterialUnrelated.albedo_color.a)
+	EdgeConeMaterialUnrelated.albedo_color = setAlpha(unrelatedColor, EdgeConeMaterialUnrelated.albedo_color.a * unrelatedAlpha)
 	recolorParticles(EdgeParticlesOut, outColor)
 	recolorParticles(EdgeParticlesIn, inColor)
-	recolorParticles(EdgeParticlesUnrelated, unrelatedColor)
+	recolorParticles(EdgeParticlesUnrelated, unrelatedColor, unrelatedAlpha)
 	reset()
 
 
@@ -137,19 +141,43 @@ func initVelocities():
 		nodeVel[node] = Vector3(0, 0, 0)
 
 
-func processOverlap(delta):
-	for node1 in nodeList:
-		for node2 in node1.get_overlapping_areas():
-			# Skip nodes with edges
-			if not node2 in nodeDistances[node1]:
-				var force = (node1.translation - node2.translation)
-				var factor = clamp(force.length() / radius, 0, 1)
-				force = force.normalized() * ((1 - factor) * maxRepulse + factor * minRepulse) * delta
-				nodeVel[node1] += force
-				nodeVel[node2] -= force
+func updateOverlap(node1):
+	var overlap
+	for node2 in node1.get_overlapping_areas():
+		# Skip nodes with edges
+		if node1.get_instance_id() < node2.get_instance_id() and not node2 in nodeDistances[node1]:
+			if !overlap:
+				overlap = []
+			overlap.append(node2)
+	if overlap:
+		nodeOverlap[node1] = overlap
+	else:
+		nodeOverlap.erase(node1)
+
+var overlapIdx = 0
+
+func processOverlap():
+	for i in range(min(50, awakeNodes.size())):
+		overlapIdx = (overlapIdx + 1) % awakeNodes.size()
+		updateOverlap(awakeNodes[overlapIdx])
+
+func processAllOverlap():
+	nodeOverlap = {}
+	for node1 in awakeNodes:
+		updateOverlap(node1)
+
+func applyOverlap(delta):
+	for node1 in nodeOverlap:
+		var p1 = node1.translation
+		for node2 in nodeOverlap[node1]:
+			var force = (p1 - node2.translation)
+			var factor = clamp(force.length() * invRadius, 0, 1)
+			force = force.normalized() * ((1 - factor) * maxRepulse + factor * minRepulse) * delta * 2
+			nodeVel[node1] += force
+			nodeVel[node2] -= force
 
 func processEdgeConstraints(delta):
-	for edge in bidiEdges:
+	for edge in awakeEdges:
 		var node1 = edge[0]
 		var node2 = edge[1]
 		var force = (node2.translation - node1.translation)
@@ -163,10 +191,11 @@ func processEdgeConstraints(delta):
 
 func applyVelocity(delta):
 	var meanSquareError = 0
-	for node in nodeList:
+	for node in awakeNodes:
 		meanSquareError += nodeVel[node].length_squared()
+	velocityFactor = velocityFactor * clamp(meanSquareError / max(awakeNodes.size(), 1) * convergenceRate + (1 - convergenceRate), 0, 1)
 
-	velocityFactor = velocityFactor * clamp(meanSquareError / nodeList.size() * convergenceRate + (1 - convergenceRate), 0, 1)
+	#velocityFactor = max(0, velocityFactor - delta * 0.5)
 
 	var effectiveVelocityFactor = velocityFactor
 
@@ -175,7 +204,7 @@ func applyVelocity(delta):
 		effectiveVelocityFactor *= 0.2
 		origin = focusNode.translation
 
-	for node in nodeList:
+	for node in awakeNodes:
 		node.translation += (nodeVel[node] + (origin - node.translation) * delta * originFactor) * effectiveVelocityFactor
 
 	if focusNode != null:
@@ -185,15 +214,33 @@ func connectAllNodes():
 	for edge in edges:
 		connectNodes(edge[1], edge[2], edge[0])
 
+func isAwake(node):
+	return min(focusDistanceForward.get(node, INF), focusDistanceBackward.get(node, INF)) < 1000
+
+func updateAwakeNodes(all):
+	if all:
+		awakeNodes = nodeList
+		awakeEdges = bidiEdges
+	else:
+		awakeNodes = []
+		for node in nodeList:
+			if isAwake(node):
+				awakeNodes.append(node)
+		awakeEdges = []
+		for edge in bidiEdges:
+			if isAwake(edge[0]) || isAwake(edge[1]):
+				awakeEdges.append(edge)
+
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	cameraPosition = get_viewport().get_camera().translation
 	# Force fixed framerate
 	delta = 1 / 60.0
-	if velocityFactor > 0.0001:
+	if velocityFactor > 0.001:
 		initVelocities()
-		processOverlap(delta)
+		processOverlap()
+		applyOverlap(delta)
 		processEdgeConstraints(delta)
 		applyVelocity(delta)
 	connectAllNodes()
@@ -333,7 +380,7 @@ func setDetails(id, node, sca = 1):
 		updateDetailPriority(node)
 
 
-func setFocusNode(node):
+func setFocusNode(node, wakeAll = false):
 	if node == focusNode || (node != null && node.get_parent() != $Nodes):
 		return
 
@@ -350,6 +397,8 @@ func setFocusNode(node):
 
 	setDetails("focus", focusNode)
 
+	updateAwakeNodes(wakeAll)
+	processAllOverlap()
 	velocityFactor = 1
 
 
@@ -368,6 +417,7 @@ func loadJSON(filename):
 		$Edges.remove_child(e)
 		e.queue_free()
 
+	nodeOverlap = {}
 	nodesByName = {}
 	nodeEdgeCount = {}
 	nodeList = []
@@ -397,7 +447,7 @@ func loadJSON(filename):
 			continue
 		# TODO Skip "null function" node, because it doesn't actually call these functions
 		var nodeObject = NodeClass.instance()
-		nodeObject.translation = Vector3(rand_range(-5, 5), rand_range(-5, 5), rand_range(-5, 5))
+		nodeObject.translation = Vector3(rand_range(-1, 1), rand_range(-1, 1), rand_range(-1, 1)) * rand_range(0, 50)
 		$Nodes.add_child(nodeObject)
 		nodesByName[node.name] = nodeObject
 		nodeList.append(nodeObject)
@@ -437,7 +487,16 @@ func loadJSON(filename):
 	for node in nodeDetailTexts:
 		nodeDetailTexts[node] += "\n[i][color=#ff8080]In: %s[/color] [color=#80ffff]Out: %s[/color][/i]" % [backwardEdges[node].size(), forwardEdges[node].size()]
 
+	var mainNode = null
+
 	if "main" in nodesByName:
-		var mainNode = nodesByName["main"]
+		mainNode = nodesByName["main"]
+	elif not nodeList.empty():
+		mainNode = nodeList[0]
+		for node in nodeList:
+			if nodeEdgeCount[node] > nodeEdgeCount[mainNode]:
+				mainNode = node
+	
+	if mainNode:
 		mainNode.translation /= 1000
-		setFocusNode(mainNode)
+		setFocusNode(mainNode, true)
